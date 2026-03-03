@@ -41,6 +41,16 @@ producto_select = st.sidebar.selectbox("Producto", productos)
 # FILTER DATA
 # =============================
 
+ventas = df_ventas[
+    (df_ventas["estacion"] == estacion_select) &
+    (df_ventas["ProductoID"] == producto_select)
+]
+
+negados = df_negados[
+    (df_negados["estacion"] == estacion_select) &
+    (df_negados["ProductoID"] == producto_select)
+]
+
 # =============================
 # AGRUPACIONES
 # =============================
@@ -118,38 +128,3 @@ fig_negados.update_layout(
 )
 
 st.plotly_chart(fig_negados, use_container_width=True)
-
-
-fig = go.Figure()
-
-# Ventas - gris claro
-fig.add_trace(go.Scatter(
-    x=df_merge["Sem_ISO"],
-    y=df_merge["Cantidad_Ventas"],
-    mode='lines',
-    name='Ventas',
-    line=dict(color="#B0B0B0", width=4)
-))
-
-# Negados - rojo con área
-fig.add_trace(go.Scatter(
-    x=df_merge["Sem_ISO"],
-    y=df_merge["Cantidad_Negados"],
-    mode='lines',
-    name='Negados',
-    line=dict(color="#C00000", width=3),
-    fill='tozeroy',
-    fillcolor='rgba(192,0,0,0.2)'
-))
-
-fig.update_layout(
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    font_color="black",
-    title="Fluctuación Histórica: Ventas vs Demanda No Satisfecha",
-    xaxis_title="Semana ISO",
-    yaxis_title="Cantidad",
-    hovermode="x unified"
-)
-
-st.plotly_chart(fig, use_container_width=True)
