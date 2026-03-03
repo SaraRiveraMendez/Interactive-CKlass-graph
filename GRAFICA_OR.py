@@ -41,17 +41,11 @@ producto_select = st.sidebar.selectbox("Producto", productos)
 # FILTER DATA
 # =============================
 
-ventas = df_ventas[
-    (df_ventas["estacion"] == estacion_select) &
-    (df_ventas["ProductoID"] == producto_select)
-]
+# =============================
+# AGRUPACIONES
+# =============================
 
-negados = df_negados[
-    (df_negados["estacion"] == estacion_select) &
-    (df_negados["ProductoID"] == producto_select)
-]
-
-# Agrupar ventas
+# Ventas por semana
 ventas_group = (
     ventas.groupby("Sem_ISO")["Cantidad"]
     .sum()
@@ -59,58 +53,72 @@ ventas_group = (
     .rename(columns={"Cantidad": "Cantidad_Ventas"})
 )
 
-# Contar negados (si no hay columna cantidad)
+# Conteo de eventos negados por semana
 negados_group = (
     negados.groupby("Sem_ISO")
     .size()
-    .reset_index(name="Cantidad_Negados")
+    .reset_index(name="Eventos_Negados")
 )
-
-# Merge
-df_merge = pd.merge(
-    ventas_group,
-    negados_group,
-    on="Sem_ISO",
-    how="outer"
-).fillna(0)
-
-# Ordenar por semana
-df_merge = df_merge.sort_values("Sem_ISO")
 
 # =============================
 # KPIs
 # =============================
 
-total_ventas = df_merge["Cantidad_Ventas"].sum()
-total_negados = df_merge["Cantidad_Negados"].sum()
+total_ventas = ventas_group["Cantidad_Ventas"].sum()
+total_eventos_negados = negados_group["Eventos_Negados"].sum()
 
-total_demanda = total_ventas + total_negados
-
-# Fill Rate correcto:
-# Ventas / Demanda Total
-fill_rate = (
-    total_ventas / total_demanda
-    if total_demanda > 0 else 0
-)
-
-# Semana con mayor quiebre
-if total_negados > 0:
-    max_quiebre_semana = df_merge.loc[
-        df_merge["Cantidad_Negados"].idxmax(), "Sem_ISO"
-    ]
-else:
-    max_quiebre_semana = 0
-
-col1, col2, col3, col4 = st.columns(4)
+col1, col2 = st.columns(2)
 
 col1.metric("Ventas Totales", f"{int(total_ventas):,}")
-col2.metric("Negados Totales", f"{int(total_negados):,}")
-col3.metric("Fill Rate", f"{fill_rate:.2%}")
-col4.metric("Semana Mayor Quiebre", int(max_quiebre_semana))
+col2.metric("Eventos de Quiebre", f"{int(total_eventos_negados):,}")
 
 # =============================
-# MAIN EXECUTIVE GRAPH
+# GRAFICA 1 — VENTAS
 # =============================
+
+fig_ventas = go.Figure()
+
+fig_ventas.add_trace(go.Scatter(
+    x=ventas_group["Sem_ISO"],
+    y=ventas_group["Cantidad_Ventas"],
+    mode='lines',
+    name='Ventas',
+    line=dict(color="#B0B0B0", width=4)
+))
+
+fig_ventas.update_layout(
+    plot_bgcolor="white",
+    paper_bgcolor="white",
+    title="Ventas por Semana",
+    xaxis_title="Semana ISO",
+    yaxis_title="Cantidad",
+    hovermode="x unified"
+)
+
+st.plotly_chart(fig_ventas, use_container_width=True)
+
+# =============================
+# GRAFICA 2 — EVENTOS NEGADOS
+# =============================
+
+fig_negados = go.Figure()
+
+fig_negados.add_trace(go.Bar(
+    x=negados_group["Sem_ISO"],
+    y=negados_group["Eventos_Negados"],
+    name='Eventos Negados'
+))
+
+fig_negados.update_layout(
+    plot_bgcolor="white",
+    paper_bgcolor="white",
+    title="Eventos de Demanda No Satisfecha por Semana",
+    xaxis_title="Semana ISO",
+    yaxis_title="Número de Eventos"
+)
+
+st.plotly_chart(fig_negados, use_container_width=True)
+
 
 fig = go.Figure()
 
