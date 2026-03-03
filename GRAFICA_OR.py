@@ -20,8 +20,8 @@ st.markdown("Análisis histórico de desempeño comercial")
 
 @st.cache_data
 def load_data():
-    df_ventas = pd.read_csv("SaraRiveraMendez/Interactive-CKlass-graph/data/ventas_light.csv")
-    df_negados = pd.read_csv("SaraRiveraMendez/Interactive-CKlass-graph/data/negados_light.csv")
+    df_ventas = pd.read_csv("data/ventas_light.csv")
+    df_negados = pd.read_csv("data/negados_light.csv")
     return df_ventas, df_negados
 
 df_ventas, df_negados = load_data()
