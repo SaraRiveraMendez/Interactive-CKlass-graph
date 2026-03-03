@@ -4,7 +4,7 @@ import pandas as pd
 df = pd.read_csv("C:/Users/rsara/Downloads/consolidado_negado_nacional.csv")
 
 # Quedarnos solo con columnas necesarias
-df = df[["Sem_ISO", "ProductoID", "estacion", "Cantidad"]]
+df = df[["Sem_ISO", "ProductoID", "estacion", "Estado"]]
 
 # Agregar
 df_grouped = df.groupby(
