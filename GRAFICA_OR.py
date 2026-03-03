@@ -15,11 +15,17 @@ st.title("Executive Sales Dashboard")
 st.markdown("Análisis histórico de desempeño comercial")
 
 # =============================
-# GOOGLE DRIVE LINKS
+# DATA
 # =============================
 
-df_negados = pd.read_csv("data/consolidado_negado_nacional.csv")
-df_ventas = pd.read_csv("data/consolidado_ventas_nacional.csv")
+@st.cache_data
+def load_data():
+    df_ventas = pd.read_csv("data/ventas_light.csv")
+    df_negados = pd.read_csv("data/negados_light.csv")
+    return df_ventas, df_negados
+
+df_ventas, df_negados = load_data()
+
 
 # =============================
 # SIDEBAR FILTERS
@@ -48,7 +54,7 @@ negados = df_negados[
 ]
 
 ventas_group = ventas.groupby("Sem_ISO")["Cantidad"].sum().reset_index()
-negados_group = negados.groupby("Sem_ISO")["Cantidad"].sum().reset_index()
+negados_group = negados.groupby("Sem_ISO")["Estado"].sum().reset_index()
 
 df_merge = pd.merge(ventas_group, negados_group,
                     on="Sem_ISO", how="outer",
