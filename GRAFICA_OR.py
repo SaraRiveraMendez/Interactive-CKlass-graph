@@ -4,7 +4,6 @@
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-# import gdown
 
 # =============================
 # PAGE CONFIG
@@ -25,7 +24,6 @@ def load_data():
     return df_ventas, df_negados
 
 df_ventas, df_negados = load_data()
-
 
 # =============================
 # SIDEBAR FILTERS
@@ -53,12 +51,31 @@ negados = df_negados[
     (df_negados["ProductoID"] == producto_select)
 ]
 
-ventas_group = ventas.groupby("Sem_ISO")["Cantidad"].sum().reset_index()
-negados_group = negados.groupby("Sem_ISO")["Estado"].sum().reset_index()
+# Agrupar ventas
+ventas_group = (
+    ventas.groupby("Sem_ISO")["Cantidad"]
+    .sum()
+    .reset_index()
+    .rename(columns={"Cantidad": "Cantidad_Ventas"})
+)
 
-df_merge = pd.merge(ventas_group, negados_group,
-                    on="Sem_ISO", how="outer",
-                    suffixes=("_Ventas", "_Negados")).fillna(0)
+# Contar negados (si no hay columna cantidad)
+negados_group = (
+    negados.groupby("Sem_ISO")
+    .size()
+    .reset_index(name="Cantidad_Negados")
+)
+
+# Merge
+df_merge = pd.merge(
+    ventas_group,
+    negados_group,
+    on="Sem_ISO",
+    how="outer"
+).fillna(0)
+
+# Ordenar por semana
+df_merge = df_merge.sort_values("Sem_ISO")
 
 # =============================
 # KPIs
@@ -67,11 +84,22 @@ df_merge = pd.merge(ventas_group, negados_group,
 total_ventas = df_merge["Cantidad_Ventas"].sum()
 total_negados = df_merge["Cantidad_Negados"].sum()
 
-fill_rate = 1 - (total_negados / (total_ventas + total_negados)) if (total_ventas + total_negados) > 0 else 0
+total_demanda = total_ventas + total_negados
 
-max_quiebre_semana = df_merge.loc[
-    df_merge["Cantidad_Negados"].idxmax(), "Sem_ISO"
-]
+# Fill Rate correcto:
+# Ventas / Demanda Total
+fill_rate = (
+    total_ventas / total_demanda
+    if total_demanda > 0 else 0
+)
+
+# Semana con mayor quiebre
+if total_negados > 0:
+    max_quiebre_semana = df_merge.loc[
+        df_merge["Cantidad_Negados"].idxmax(), "Sem_ISO"
+    ]
+else:
+    max_quiebre_semana = 0
 
 col1, col2, col3, col4 = st.columns(4)
 
