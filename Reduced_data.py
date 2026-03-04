@@ -1,14 +1,14 @@
 import pandas as pd
 
 # Cargar archivo pesado
-df = pd.read_csv("C:/Users/rsara/Downloads/consolidado_negado_nacional.csv")
+df = pd.read_csv("C:/Users/rsara/Downloads/consolidado_ventas_nacional.csv")
 
 # Quedarnos solo con columnas necesarias
-df = df[["Sem_ISO", "ProductoID", "estacion", "Estado", "Negados", "Sucursal_Nombre"]]
+df = df[["Sem_ISO", "ProductoID", "estacion", "Estado", "Cantidad", "Sucursal_Nombre"]]
 
 # Agregar
 df_grouped = (
-    df.groupby(["Sem_ISO", "ProductoID", "estacion", "Negados", "Sucursal_Nombre"])[
+    df.groupby(["Sem_ISO", "ProductoID", "estacion", "Cantidada", "Sucursal_Nombre"])[
         "Estado"
     ]
     .sum()
@@ -16,7 +16,7 @@ df_grouped = (
 )
 
 # Guardar versión ligera
-df_grouped.to_csv("negados_light.csv", index=False)
+df_grouped.to_csv("ventas_light_final.csv", index=False)
 
 
 print("Archivo reducido creado.")
