@@ -135,8 +135,8 @@ def normalizar_producto_id(product_id):
 @st.cache_data
 def load_data():
     # 🔗 Reemplaza estos IDs con los de tus archivos de Google Drive
-    ID_VENTAS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
-    ID_NEGADOS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
+    ID_NEGADOS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
+    ID_VENTAS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
 
     url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
     url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
