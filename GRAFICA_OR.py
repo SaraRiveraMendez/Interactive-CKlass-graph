@@ -227,7 +227,7 @@ st.sidebar.markdown("## 📊 Modo de Visualización")
 
 modo_vista = st.sidebar.radio(
     "Mostrar datos de:",
-    ["Ambos (Ventas + Quiebres)", "Solo Ventas", "Solo Quiebres"],
+    ["Ambos (Ventas + Negados)", "Solo Ventas", "Solo Negados"],
     index=0,
 )
 
@@ -239,9 +239,9 @@ st.sidebar.markdown("## 📈 Gráficas")
 
 graficas_activas = {
     "serie_ventas": st.sidebar.checkbox("Serie — Ventas", value=True),
-    "serie_quiebres": st.sidebar.checkbox("Serie — Quiebres", value=True),
+    "serie_quiebres": st.sidebar.checkbox("Serie — Negados", value=True),
     "heat_ventas": st.sidebar.checkbox("Heatmap — Ventas", value=True),
-    "heat_quiebres": st.sidebar.checkbox("Heatmap — Quiebres", value=True),
+    "heat_quiebres": st.sidebar.checkbox("Heatmap — Negados", value=True),
 }
 
 # =============================
@@ -298,7 +298,7 @@ negados_group = negados_group.sort_values("Sem_ISO_num").reset_index(drop=True)
 # Heatmaps según el modo seleccionado
 if modo_vista == "Solo Ventas":
     col_producto = "ProductoID"
-elif modo_vista == "Solo Quiebres":
+elif modo_vista == "Solo Negados":
     col_producto = "ProductoID"
 else:  # Ambos - usar ProductoID normalizado
     col_producto = "ProductoID_Norm"
@@ -343,7 +343,7 @@ productos_activos = ventas[col_producto].nunique()
 productos_con_quiebre = negados[col_producto].nunique()
 
 # Productos en común (solo en modo "Ambos")
-if modo_vista == "Ambos (Ventas + Quiebres)":
+if modo_vista == "Ambos (Ventas + Negados)":
     productos_comunes = len(
         set(ventas[col_producto].unique()) & set(negados[col_producto].unique())
     )
@@ -356,18 +356,18 @@ for col, label, value, sub in [
     (col1, "Ventas Totales", f"{int(total_ventas):,}", "unidades vendidas"),
     (
         col2,
-        "Eventos de Quiebre",
+        "Eventos de Negado",
         f"{int(total_eventos_negados):,}",
         "demanda no satisfecha",
     ),
-    (col3, "Semanas con Quiebre", f"{int(semanas_con_quiebre):,}", "semanas afectadas"),
+    (col3, "Semanas con Negados", f"{int(semanas_con_quiebre):,}", "semanas afectadas"),
     (
         col4,
         "Productos",
         f"{int(productos_activos):,}",
         (
-            f"{productos_con_quiebre} con quiebres"
-            if modo_vista != "Ambos (Ventas + Quiebres)"
+            f"{productos_con_quiebre} con negados"
+            if modo_vista != "Ambos (Ventas + Negados)"
             else f"{productos_comunes} en común"
         ),
     ),
@@ -390,7 +390,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # SERIES DE TIEMPO
 # =============================
 series_activas = []
-if graficas_activas["serie_ventas"] and modo_vista != "Solo Quiebres":
+if graficas_activas["serie_ventas"] and modo_vista != "Solo Negados":
     series_activas.append("ventas")
 if graficas_activas["serie_quiebres"] and modo_vista != "Solo Ventas":
     series_activas.append("quiebres")
@@ -455,7 +455,7 @@ if series_activas:
         )
         fig_negados.update_layout(
             **LAYOUT_BASE,
-            title=dict(text="Quiebres Totales por Semana", font=dict(size=14)),
+            title=dict(text="Negados Totales por Semana", font=dict(size=14)),
             xaxis_title="Semana ISO",
             yaxis_title="Unidades No Satisfechas",
         )
@@ -506,7 +506,7 @@ HEATMAP_LAYOUT = dict(
     height=500,
 )
 
-mostrar_heat_ventas = graficas_activas["heat_ventas"] and modo_vista != "Solo Quiebres"
+mostrar_heat_ventas = graficas_activas["heat_ventas"] and modo_vista != "Solo Negados"
 mostrar_heat_quiebres = (
     graficas_activas["heat_quiebres"] and modo_vista != "Solo Ventas"
 )
@@ -562,7 +562,7 @@ if mostrar_heat_quiebres and not heat_negados_df.empty:
             y=[str(p) for p in heat_negados_df.index],
             colorscale=COLORSCALE_QUIEBRE,
             hoverongaps=False,
-            hovertemplate="Semana: %{x}<br>Producto: %{y}<br>Quiebres: %{z:,}<extra></extra>",
+            hovertemplate="Semana: %{x}<br>Producto: %{y}<br>Negados: %{z:,}<extra></extra>",
             colorbar=dict(title="Unidades No\nSatisfechas", tickfont=dict(size=10)),
         )
     )
@@ -571,7 +571,7 @@ if mostrar_heat_quiebres and not heat_negados_df.empty:
         paper_bgcolor="white",
         font=dict(family="Inter, Arial, sans-serif"),
         title=dict(
-            text="Heatmap de Quiebres por Producto", font=dict(size=14, color="#1A1A1A")
+            text="Heatmap de Negados por Producto", font=dict(size=14, color="#1A1A1A")
         ),
         xaxis=dict(
             title="Semana ISO",

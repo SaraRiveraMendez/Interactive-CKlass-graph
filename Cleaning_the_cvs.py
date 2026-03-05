@@ -8,16 +8,19 @@ def limpiar_nombre_duplicado(texto):
     Detecta y limpia nombres duplicados/triplicados.
     Ej: 'ChiapasChiapas' → 'Chiapas'
         'GuanajuatoGuanajuatoGuanajuato' → 'Guanajuato'
+        'Estado de MéxicoEstado de México' → 'Estado de México'
     """
     if pd.isna(texto) or texto == "nan":
         return texto
 
     texto = str(texto).strip()
-
-    # Intentar detectar repeticiones
     longitud = len(texto)
 
-    # Probar divisores desde 2 hasta 10 (para nombres duplicados hasta 10 veces)
+    # Si el texto es muy corto, no intentar limpiar
+    if longitud < 4:
+        return texto
+
+    # Estrategia 1: Buscar repeticiones exactas por divisores
     for n in range(2, 11):
         if longitud % n == 0:
             tam_segmento = longitud // n
@@ -25,6 +28,26 @@ def limpiar_nombre_duplicado(texto):
 
             # Verificar si el texto es la repetición exacta del segmento
             if segmento * n == texto:
+                return segmento
+
+    # Estrategia 2: Buscar duplicados no exactos (para casos con espacios)
+    # Intentar dividir a la mitad y ver si las mitades son iguales
+    if longitud % 2 == 0:
+        mitad = longitud // 2
+        primera_mitad = texto[:mitad]
+        segunda_mitad = texto[mitad:]
+        if primera_mitad == segunda_mitad:
+            return primera_mitad
+
+    # Estrategia 3: Buscar patrones repetidos más flexibles
+    # Probar diferentes tamaños de segmento, no solo divisores exactos
+    for tam in range(3, longitud // 2 + 1):
+        segmento = texto[:tam]
+        # Verificar si el texto empieza repitiendo este segmento
+        repeticiones = longitud // tam
+        if segmento * repeticiones == texto[: tam * repeticiones]:
+            # Si encontramos un patrón que se repite al menos 2 veces
+            if repeticiones >= 2:
                 return segmento
 
     return texto
