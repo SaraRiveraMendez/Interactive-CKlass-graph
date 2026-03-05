@@ -568,7 +568,7 @@ if mostrar_heat_ventas and not heat_ventas_df.empty:
     st.markdown("</div>", unsafe_allow_html=True)
 elif mostrar_heat_ventas:
     st.info(
-        "ℹ️ No hay datos de ventas para mostrar en el heatmap con los filtros actuales."
+        "No hay datos de ventas para mostrar en el heatmap con los filtros actuales."
     )
 
 if mostrar_heat_quiebres and not heat_negados_df.empty:
