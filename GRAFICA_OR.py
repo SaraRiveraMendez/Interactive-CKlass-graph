@@ -30,11 +30,6 @@ st.markdown(
         }
         .cklass-header h1 { color: white; margin: 0; font-size: 1.8rem; font-weight: 700; }
         .cklass-header p  { color: rgba(255,255,255,0.75); margin: 0.2rem 0 0 0; font-size: 0.9rem; }
-        .filter-badge {
-            background: #2A2A2A; border-radius: 6px; padding: 0.6rem 1rem;
-            margin-bottom: 0.5rem; font-size: 0.78rem; color: #AAAAAA;
-        }
-        .filter-badge span { color: #FFFFFF; font-weight: 600; }
         .kpi-card {
             background: white; border-radius: 8px; padding: 1.2rem 1.5rem;
             box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-left: 4px solid #C8102E;
@@ -64,47 +59,31 @@ st.markdown(
 # DATA FUNCTIONS
 # =============================
 def limpiar_nombre_duplicado(texto):
-    """
-    Detecta y limpia nombres duplicados/triplicados.
-    """
     if pd.isna(texto) or texto == "nan":
         return texto
-
     texto = str(texto).strip()
     longitud = len(texto)
-
     if longitud < 4:
         return texto
-
-    # Estrategia 1: Repeticiones exactas
     for n in range(2, 11):
         if longitud % n == 0:
             tam_segmento = longitud // n
             segmento = texto[:tam_segmento]
             if segmento * n == texto:
                 return segmento
-
-    # Estrategia 2: Duplicados con espacios
     if longitud % 2 == 0:
         mitad = longitud // 2
-        primera_mitad = texto[:mitad]
-        segunda_mitad = texto[mitad:]
-        if primera_mitad == segunda_mitad:
-            return primera_mitad
-
-    # Estrategia 3: Patrones flexibles
+        if texto[:mitad] == texto[mitad:]:
+            return texto[:mitad]
     for tam in range(3, longitud // 2 + 1):
         segmento = texto[:tam]
         repeticiones = longitud // tam
-        if segmento * repeticiones == texto[: tam * repeticiones]:
-            if repeticiones >= 2:
-                return segmento
-
+        if segmento * repeticiones == texto[: tam * repeticiones] and repeticiones >= 2:
+            return segmento
     return texto
 
 
 def limpiar_df(df):
-    """Limpia encoding, strips espacios y normaliza strings."""
     for col in df.select_dtypes(include="object").columns:
         df[col] = (
             df[col]
@@ -115,43 +94,96 @@ def limpiar_df(df):
             .str.replace(r"\s+", " ", regex=True)
             .str.replace(r"[\x00-\x1f\x7f-\x9f]", "", regex=True)
         )
-
     if "Estado" in df.columns:
         df["Estado"] = df["Estado"].apply(limpiar_nombre_duplicado)
     if "Sucursal_Nombre" in df.columns:
         df["Sucursal_Nombre"] = df["Sucursal_Nombre"].apply(limpiar_nombre_duplicado)
-
     return df
 
 
 def normalizar_producto_id(product_id):
-    """Normaliza ProductoID para hacer match entre ventas y negados."""
-    product_str = str(product_id).strip()
-    product_str = product_str.lstrip("0")
-    if len(product_str) > 9:
-        return product_str[:9]
-    return product_str
+    product_str = str(product_id).strip().lstrip("0")
+    return product_str[:9] if len(product_str) > 9 else product_str
+
+
+def encontrar_columna(df, nombres_posibles):
+    columnas_lower = {col.lower(): col for col in df.columns}
+    for nombre in nombres_posibles:
+        if nombre.lower() in columnas_lower:
+            return columnas_lower[nombre.lower()]
+    return None
 
 
 @st.cache_data(show_spinner="Cargando datos...")
 def load_data():
     try:
-        # IDs de Google Drive
         ID_NEGADOS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
-        ID_VENTAS = "1AHgy8f0nTCGnehD8dXkk-9gEFiDKOOyG"
+        ID_VENTAS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
 
         url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
         url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
 
-        # Cargar datos
-        df_ventas = pd.read_csv(url_ventas, encoding="utf-8-sig")
-        df_negados = pd.read_csv(url_negados, encoding="utf-8-sig")
+        df_ventas = limpiar_df(pd.read_csv(url_ventas, encoding="utf-8-sig"))
+        df_negados = limpiar_df(pd.read_csv(url_negados, encoding="utf-8-sig"))
 
-        # Limpiar
-        df_ventas = limpiar_df(df_ventas)
-        df_negados = limpiar_df(df_negados)
+        # Detectar columnas
+        mapeo_ventas = {
+            encontrar_columna(
+                df_ventas, ["Cantidad", "cantidad", "Qty", "Ventas"]
+            ): "Cantidad",
+            encontrar_columna(df_ventas, ["Año", "año", "Year", "Anio"]): "Año",
+            encontrar_columna(
+                df_ventas, ["Sem_ISO", "sem_iso", "Semana", "Week"]
+            ): "Sem_ISO",
+            encontrar_columna(
+                df_ventas, ["ProductoID", "productoid", "producto_id", "Producto"]
+            ): "ProductoID",
+            encontrar_columna(df_ventas, ["Estado", "estado", "State"]): "Estado",
+            encontrar_columna(
+                df_ventas, ["Sucursal_Nombre", "Sucursal", "sucursal"]
+            ): "Sucursal_Nombre",
+            encontrar_columna(
+                df_ventas, ["estacion", "Estacion", "season", "Temporada"]
+            ): "estacion",
+        }
 
-        # Convertir tipos numéricos
+        mapeo_negados = {
+            encontrar_columna(
+                df_negados, ["Negados", "negados", "Denied", "Quiebres"]
+            ): "Negados",
+            encontrar_columna(df_negados, ["Año", "año", "Year", "Anio"]): "Año",
+            encontrar_columna(
+                df_negados, ["Sem_ISO", "sem_iso", "Semana", "Week"]
+            ): "Sem_ISO",
+            encontrar_columna(
+                df_negados, ["ProductoID", "productoid", "producto_id", "Producto"]
+            ): "ProductoID",
+            encontrar_columna(df_negados, ["Estado", "estado", "State"]): "Estado",
+            encontrar_columna(
+                df_negados, ["Sucursal_Nombre", "Sucursal", "sucursal"]
+            ): "Sucursal_Nombre",
+            encontrar_columna(
+                df_negados, ["estacion", "Estacion", "season", "Temporada"]
+            ): "estacion",
+        }
+
+        # Verificar columnas críticas
+        if None in mapeo_ventas:
+            raise ValueError(
+                f"Columnas faltantes en ventas. Disponibles: {df_ventas.columns.tolist()}"
+            )
+        if None in mapeo_negados:
+            raise ValueError(
+                f"Columnas faltantes en negados. Disponibles: {df_negados.columns.tolist()}"
+            )
+
+        df_ventas = df_ventas.rename(
+            columns={k: v for k, v in mapeo_ventas.items() if k}
+        )
+        df_negados = df_negados.rename(
+            columns={k: v for k, v in mapeo_negados.items() if k}
+        )
+
         df_ventas["Cantidad"] = pd.to_numeric(
             df_ventas["Cantidad"], errors="coerce"
         ).fillna(0)
@@ -160,14 +192,8 @@ def load_data():
         ).fillna(0)
         df_ventas["Año"] = pd.to_numeric(df_ventas["Año"], errors="coerce")
         df_negados["Año"] = pd.to_numeric(df_negados["Año"], errors="coerce")
-
-        # Limpiar Sem_ISO
-        if "Sem_ISO" in df_ventas.columns:
-            df_ventas["Sem_ISO"] = df_ventas["Sem_ISO"].astype(str).str.strip()
-        if "Sem_ISO" in df_negados.columns:
-            df_negados["Sem_ISO"] = df_negados["Sem_ISO"].astype(str).str.strip()
-
-        # Normalizar ProductoID
+        df_ventas["Sem_ISO"] = df_ventas["Sem_ISO"].astype(str).str.strip()
+        df_negados["Sem_ISO"] = df_negados["Sem_ISO"].astype(str).str.strip()
         df_ventas["ProductoID_Norm"] = df_ventas["ProductoID"].apply(
             normalizar_producto_id
         )
@@ -178,23 +204,14 @@ def load_data():
         return df_ventas, df_negados
 
     except Exception as e:
-        st.error(f"❌ Error al cargar los datos: {str(e)}")
-        st.info(
-            "🔍 Verifica que los archivos de Google Drive sean públicos (Cualquier persona con el enlace puede ver)"
-        )
+        st.error(f"❌ Error: {str(e)}")
+        st.info("Verifica que los archivos de Google Drive sean públicos")
         st.stop()
 
 
-# Cargar datos
 df_ventas, df_negados = load_data()
 
-# =============================
-# COLORES CKLASS
-# =============================
-ROJO = "#C8102E"
-GRIS = "#6B6B6B"
-GRIS_L = "#E0E0E0"
-
+ROJO, GRIS, GRIS_L = "#C8102E", "#6B6B6B", "#E0E0E0"
 LAYOUT_BASE = dict(
     plot_bgcolor="white",
     paper_bgcolor="white",
@@ -206,15 +223,9 @@ LAYOUT_BASE = dict(
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
 )
 
-# =============================
-# SIDEBAR — FILTROS
-# =============================
-st.sidebar.markdown("## 🔍 Filtros")
-st.sidebar.markdown("---")
-
+st.sidebar.markdown("## 🔍 Filtros\n---")
 estados = sorted(df_ventas["Estado"].dropna().astype(str).unique().tolist())
 estado_select = st.sidebar.selectbox("Estado", estados, key="estado_sb")
-
 sucursales = sorted(
     df_ventas[df_ventas["Estado"] == estado_select]["Sucursal_Nombre"]
     .dropna()
@@ -223,14 +234,20 @@ sucursales = sorted(
     .tolist()
 )
 sucursal_select = st.sidebar.selectbox("Sucursal", sucursales, key="sucursal_sb")
-
-anios_raw = pd.to_numeric(
-    df_ventas[df_ventas["Sucursal_Nombre"] == sucursal_select]["Año"].dropna().unique(),
-    errors="coerce",
+anios = sorted(
+    [
+        int(a)
+        for a in pd.to_numeric(
+            df_ventas[df_ventas["Sucursal_Nombre"] == sucursal_select]["Año"]
+            .dropna()
+            .unique(),
+            errors="coerce",
+        )
+        if pd.notna(a)
+    ],
+    reverse=True,
 )
-anios = sorted([int(a) for a in anios_raw if pd.notna(a)], reverse=True)
 anio_select = st.sidebar.selectbox("Año", anios, key="anio_sb")
-
 temporadas = sorted(
     df_ventas[
         (df_ventas["Sucursal_Nombre"] == sucursal_select)
@@ -242,19 +259,13 @@ temporadas = sorted(
     .tolist()
 )
 temporada_select = st.sidebar.selectbox("Temporada", temporadas, key="temporada_sb")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("## 📊 Modo de Visualización")
-
+st.sidebar.markdown("---\n## 📊 Modo de Visualización")
 modo_vista = st.sidebar.radio(
     "Mostrar datos de:",
     ["Ambos (Ventas + Negados)", "Solo Ventas", "Solo Negados"],
     index=0,
 )
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("## 📈 Gráficas")
-
+st.sidebar.markdown("---\n## 📈 Gráficas")
 graficas_activas = {
     "serie_ventas": st.sidebar.checkbox("Serie — Ventas", value=True),
     "serie_quiebres": st.sidebar.checkbox("Serie — Negados", value=True),
@@ -262,37 +273,22 @@ graficas_activas = {
     "heat_quiebres": st.sidebar.checkbox("Heatmap — Negados", value=True),
 }
 
-# =============================
-# HEADER
-# =============================
 st.markdown(
-    f"""
-    <div class="cklass-header">
-        <h1>Executive Sales Dashboard</h1>
-        <p>{sucursal_select} &nbsp;·&nbsp; {estado_select} &nbsp;·&nbsp; {int(anio_select)} &nbsp;·&nbsp; Temporada {temporada_select}</p>
-    </div>
-""",
+    f'<div class="cklass-header"><h1>Executive Sales Dashboard</h1><p>{sucursal_select} &nbsp;·&nbsp; {estado_select} &nbsp;·&nbsp; {int(anio_select)} &nbsp;·&nbsp; Temporada {temporada_select}</p></div>',
     unsafe_allow_html=True,
 )
 
-# =============================
-# FILTER DATA
-# =============================
 ventas = df_ventas[
     (df_ventas["Sucursal_Nombre"] == sucursal_select)
     & (df_ventas["Año"] == anio_select)
     & (df_ventas["estacion"] == temporada_select)
 ]
-
 negados = df_negados[
     (df_negados["Sucursal_Nombre"] == sucursal_select)
     & (df_negados["Año"] == anio_select)
     & (df_negados["estacion"] == temporada_select)
 ]
 
-# =============================
-# AGRUPACIONES
-# =============================
 ventas_group = (
     ventas.groupby("Sem_ISO")["Cantidad"]
     .sum()
@@ -311,11 +307,9 @@ negados_group = (
 negados_group["Sem_ISO_num"] = pd.to_numeric(negados_group["Sem_ISO"], errors="coerce")
 negados_group = negados_group.sort_values("Sem_ISO_num").reset_index(drop=True)
 
-# Heatmaps
 col_producto = (
     "ProductoID" if modo_vista != "Ambos (Ventas + Negados)" else "ProductoID_Norm"
 )
-
 heat_ventas_df = (
     ventas.groupby([col_producto, "Sem_ISO"])["Cantidad"]
     .sum()
@@ -324,12 +318,12 @@ heat_ventas_df = (
     .fillna(0)
 )
 if not heat_ventas_df.empty:
-    cols_ordenadas = sorted(
-        heat_ventas_df.columns,
-        key=lambda x: float(x) if str(x).replace(".", "").isdigit() else 0,
-    )
-    heat_ventas_df = heat_ventas_df[cols_ordenadas]
-
+    heat_ventas_df = heat_ventas_df[
+        sorted(
+            heat_ventas_df.columns,
+            key=lambda x: float(x) if str(x).replace(".", "").isdigit() else 0,
+        )
+    ]
 heat_negados_df = (
     negados.groupby([col_producto, "Sem_ISO"])["Negados"]
     .sum()
@@ -338,30 +332,29 @@ heat_negados_df = (
     .fillna(0)
 )
 if not heat_negados_df.empty:
-    cols_ordenadas = sorted(
-        heat_negados_df.columns,
-        key=lambda x: float(x) if str(x).replace(".", "").isdigit() else 0,
-    )
-    heat_negados_df = heat_negados_df[cols_ordenadas]
+    heat_negados_df = heat_negados_df[
+        sorted(
+            heat_negados_df.columns,
+            key=lambda x: float(x) if str(x).replace(".", "").isdigit() else 0,
+        )
+    ]
 
-# =============================
-# KPIs
-# =============================
-total_ventas = ventas_group["Cantidad_Ventas"].sum()
-total_eventos_negados = negados_group["Eventos_Negados"].sum()
-semanas_con_quiebre = (negados_group["Eventos_Negados"] > 0).sum()
-productos_activos = ventas[col_producto].nunique()
-productos_con_quiebre = negados[col_producto].nunique()
-
-if modo_vista == "Ambos (Ventas + Negados)":
-    productos_comunes = len(
-        set(ventas[col_producto].unique()) & set(negados[col_producto].unique())
-    )
-else:
-    productos_comunes = 0
+total_ventas, total_eventos_negados, semanas_con_quiebre = (
+    ventas_group["Cantidad_Ventas"].sum(),
+    negados_group["Eventos_Negados"].sum(),
+    (negados_group["Eventos_Negados"] > 0).sum(),
+)
+productos_activos, productos_con_quiebre = (
+    ventas[col_producto].nunique(),
+    negados[col_producto].nunique(),
+)
+productos_comunes = (
+    len(set(ventas[col_producto].unique()) & set(negados[col_producto].unique()))
+    if modo_vista == "Ambos (Ventas + Negados)"
+    else 0
+)
 
 col1, col2, col3, col4 = st.columns(4)
-
 for col, label, value, sub in [
     (col1, "Ventas Totales", f"{int(total_ventas):,}", "unidades vendidas"),
     (
@@ -384,21 +377,12 @@ for col, label, value, sub in [
 ]:
     with col:
         st.markdown(
-            f"""
-            <div class="kpi-card">
-                <div class="kpi-label">{label}</div>
-                <div class="kpi-value">{value}</div>
-                <div class="kpi-sub">{sub}</div>
-            </div>
-        """,
+            f'<div class="kpi-card"><div class="kpi-label">{label}</div><div class="kpi-value">{value}</div><div class="kpi-sub">{sub}</div></div>',
             unsafe_allow_html=True,
         )
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# =============================
-# SERIES DE TIEMPO
-# =============================
 series_activas = []
 if graficas_activas["serie_ventas"] and modo_vista != "Solo Negados":
     series_activas.append("ventas")
@@ -410,7 +394,6 @@ if series_activas:
         '<div class="section-title">Comportamiento Global de la Sucursal</div>',
         unsafe_allow_html=True,
     )
-
     if len(series_activas) == 2:
         col_ventas, col_quiebres = st.columns(2)
     else:
@@ -441,7 +424,6 @@ if series_activas:
             categoryorder="array",
             categoryarray=ventas_group["Sem_ISO"].tolist(),
         )
-
         with col_ventas:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig_ventas, use_container_width=True)
@@ -472,15 +454,11 @@ if series_activas:
             categoryorder="array",
             categoryarray=negados_group["Sem_ISO"].tolist(),
         )
-
         with col_quiebres:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig_negados, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-# =============================
-# HEATMAPS
-# =============================
 COLORSCALE_VENTAS = [
     [0, "#F0F0F0"],
     [0.01, "#FADADD"],
@@ -496,18 +474,22 @@ COLORSCALE_QUIEBRE = [
     [1.0, "#8B2500"],
 ]
 
-mostrar_heat_ventas = graficas_activas["heat_ventas"] and modo_vista != "Solo Negados"
-mostrar_heat_quiebres = (
-    graficas_activas["heat_quiebres"] and modo_vista != "Solo Ventas"
-)
-
-if mostrar_heat_ventas or mostrar_heat_quiebres:
+if (
+    graficas_activas["heat_ventas"]
+    and modo_vista != "Solo Negados"
+    or graficas_activas["heat_quiebres"]
+    and modo_vista != "Solo Ventas"
+):
     st.markdown(
         '<div class="section-title">Fluctuación por Producto y Semana</div>',
         unsafe_allow_html=True,
     )
 
-if mostrar_heat_ventas and not heat_ventas_df.empty:
+if (
+    graficas_activas["heat_ventas"]
+    and modo_vista != "Solo Negados"
+    and not heat_ventas_df.empty
+):
     fig_hv = go.Figure(
         go.Heatmap(
             z=heat_ventas_df.values,
@@ -539,11 +521,12 @@ if mostrar_heat_ventas and not heat_ventas_df.empty:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.plotly_chart(fig_hv, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
-elif mostrar_heat_ventas:
-    st.info("No hay datos de ventas para el heatmap con los filtros actuales.")
 
-
-if mostrar_heat_quiebres and not heat_negados_df.empty:
+if (
+    graficas_activas["heat_quiebres"]
+    and modo_vista != "Solo Ventas"
+    and not heat_negados_df.empty
+):
     fig_hn = go.Figure(
         go.Heatmap(
             z=heat_negados_df.values,
@@ -575,11 +558,6 @@ if mostrar_heat_quiebres and not heat_negados_df.empty:
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
     st.plotly_chart(fig_hn, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
-elif mostrar_heat_quiebres:
-    st.info("No hay datos de quiebres para el heatmap con los filtros actuales.")
 
-# =============================
-# EMPTY STATE
-# =============================
 if ventas.empty and negados.empty:
-    st.warning("No hay datos para la combinación de filtros seleccionada.")
+    st.warning("⚠️ No hay datos para la combinación de filtros seleccionada.")
