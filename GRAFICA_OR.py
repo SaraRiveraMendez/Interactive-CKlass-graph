@@ -264,29 +264,51 @@ if show_series:
     else:
         c1 = c2 = st.container()
 
+    SERIES_LAYOUT = dict(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        margin=dict(t=50, b=50, l=60, r=20),
+        hovermode="x unified",
+        font=dict(family="Inter, Arial, sans-serif", size=12, color="#1A1A1A"),
+        xaxis=dict(
+            showgrid=False,
+            linecolor="#E0E0E0",
+            tickfont=dict(size=11, color="#444444"),
+            title_font=dict(size=12, color="#444444"),
+        ),
+        yaxis=dict(
+            gridcolor="#F0F0F0",
+            linecolor="#E0E0E0",
+            tickfont=dict(size=11, color="#444444"),
+            title_font=dict(size=12, color="#444444"),
+        ),
+    )
+
     if modo_vista in ["Ambos", "Solo Ventas"]:
         fig = go.Figure(
             go.Scatter(
                 x=vg["Sem_ISO"],
                 y=vg["Cantidad"],
                 mode="lines+markers",
-                line=dict(color=ROJO, width=3),
-                marker=dict(size=6),
+                line=dict(color=ROJO, width=2.5),
+                marker=dict(size=5, color=ROJO),
                 fill="tozeroy",
-                fillcolor="rgba(200,16,46,0.08)",
+                fillcolor="rgba(200,16,46,0.07)",
             )
         )
         fig.update_layout(
-            **LAYOUT_BASE,
-            title="Ventas por Semana",
-            xaxis_title="Semana",
-            yaxis_title="Cantidad",
+            **SERIES_LAYOUT,
+            title=dict(text="Ventas por Semana", font=dict(size=14, color="#1A1A1A")),
+            xaxis_title="Semana ISO",
+            yaxis_title="Unidades vendidas",
         )
         fig.update_xaxes(
             type="category", categoryorder="array", categoryarray=vg["Sem_ISO"].tolist()
         )
         with c1:
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     if modo_vista in ["Ambos", "Solo Negados"]:
         fig = go.Figure(
@@ -294,23 +316,25 @@ if show_series:
                 x=ng["Sem_ISO"],
                 y=ng["Negados"],
                 mode="lines+markers",
-                line=dict(color=ROJO, width=3),
-                marker=dict(size=6),
+                line=dict(color="#8B2500", width=2.5),
+                marker=dict(size=5, color="#8B2500"),
                 fill="tozeroy",
-                fillcolor="rgba(200,16,46,0.08)",
+                fillcolor="rgba(139,37,0,0.07)",
             )
         )
         fig.update_layout(
-            **LAYOUT_BASE,
-            title="Negados por Semana",
-            xaxis_title="Semana",
-            yaxis_title="Negados",
+            **SERIES_LAYOUT,
+            title=dict(text="Negados por Semana", font=dict(size=14, color="#1A1A1A")),
+            xaxis_title="Semana ISO",
+            yaxis_title="Unidades no satisfechas",
         )
         fig.update_xaxes(
             type="category", categoryorder="array", categoryarray=ng["Sem_ISO"].tolist()
         )
         with c2:
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # Heatmaps
 if show_heat:
@@ -318,6 +342,41 @@ if show_heat:
         '<div class="section-title">Distribución por Producto</div>',
         unsafe_allow_html=True,
     )
+
+    HEAT_LAYOUT = dict(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Inter, Arial, sans-serif", size=11, color="#1A1A1A"),
+        margin=dict(t=55, b=80, l=130, r=20),
+        height=420,
+        xaxis=dict(
+            title=dict(text="Semana ISO", font=dict(size=12, color="#444")),
+            tickfont=dict(size=10, color="#444"),
+            showgrid=False,
+            side="bottom",
+        ),
+        yaxis=dict(
+            title=dict(text="Producto", font=dict(size=12, color="#444")),
+            tickfont=dict(size=9, color="#333"),
+            autorange=True,
+        ),
+    )
+
+    SCALE_VENTAS = [
+        [0.00, "#F5F5F5"],
+        [0.05, "#FFD6DA"],
+        [0.30, "#F4A7B4"],
+        [0.65, "#E0405A"],
+        [1.00, "#C8102E"],
+    ]
+
+    SCALE_NEGADOS = [
+        [0.00, "#F5F5F5"],
+        [0.05, "#FFE5CC"],
+        [0.30, "#FFAA66"],
+        [0.65, "#D05010"],
+        [1.00, "#8B2500"],
+    ]
 
     if modo_vista in ["Ambos", "Solo Ventas"]:
         hv = (
@@ -328,20 +387,33 @@ if show_heat:
             .fillna(0)
         )
         if not hv.empty:
-            hv = hv.iloc[:300]  # Máximo 300 productos
+            hv = hv.iloc[:300]
             fig = go.Figure(
                 go.Heatmap(
                     z=hv.values,
                     x=[str(s) for s in hv.columns],
                     y=[str(p) for p in hv.index],
-                    colorscale=[[0, "#F0F0F0"], [1, ROJO]],
-                    showscale=False,
+                    colorscale=SCALE_VENTAS,
+                    showscale=True,
+                    colorbar=dict(
+                        title=dict(text="Unidades", font=dict(size=11)),
+                        tickfont=dict(size=10),
+                        thickness=14,
+                        len=0.8,
+                    ),
+                    hovertemplate="Semana: %{x}<br>Producto: %{y}<br>Ventas: %{z:,}<extra></extra>",
                 )
             )
             fig.update_layout(
-                title="Heatmap Ventas", height=400, margin=dict(t=50, b=50, l=80, r=20)
+                **HEAT_LAYOUT,
+                title=dict(
+                    text="Heatmap — Ventas por Producto",
+                    font=dict(size=14, color="#1A1A1A"),
+                ),
             )
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
     if modo_vista in ["Ambos", "Solo Negados"]:
         hn = (
@@ -358,11 +430,24 @@ if show_heat:
                     z=hn.values,
                     x=[str(s) for s in hn.columns],
                     y=[str(p) for p in hn.index],
-                    colorscale=[[0, "#F0F0F0"], [1, "#8B2500"]],
-                    showscale=False,
+                    colorscale=SCALE_NEGADOS,
+                    showscale=True,
+                    colorbar=dict(
+                        title=dict(text="Negados", font=dict(size=11)),
+                        tickfont=dict(size=10),
+                        thickness=14,
+                        len=0.8,
+                    ),
+                    hovertemplate="Semana: %{x}<br>Producto: %{y}<br>Negados: %{z:,}<extra></extra>",
                 )
             )
             fig.update_layout(
-                title="Heatmap Negados", height=400, margin=dict(t=50, b=50, l=80, r=20)
+                **HEAT_LAYOUT,
+                title=dict(
+                    text="Heatmap — Negados por Producto",
+                    font=dict(size=14, color="#1A1A1A"),
+                ),
             )
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
