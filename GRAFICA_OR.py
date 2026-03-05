@@ -138,7 +138,7 @@ def load_data():
     try:
         # IDs de Google Drive
         ID_NEGADOS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
-        ID_VENTAS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
+        ID_VENTAS = "1AHgy8f0nTCGnehD8dXkk-9gEFiDKOOyG"
 
         url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
         url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
