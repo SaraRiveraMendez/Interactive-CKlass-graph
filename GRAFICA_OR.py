@@ -134,10 +134,27 @@ def normalizar_producto_id(product_id):
 
 @st.cache_data
 def load_data():
-    df_ventas = pd.read_parquet("data/ventas_lights_final.parquet")
-    df_negados = pd.read_parquet("data/negados_lights_final.parquet")
+    # 🔗 Reemplaza estos IDs con los de tus archivos de Google Drive
+    ID_VENTAS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
+    ID_NEGADOS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
+
+    url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
+    url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
+
+    df_ventas = pd.read_csv(url_ventas, encoding="utf-8-sig")
+    df_negados = pd.read_csv(url_negados, encoding="utf-8-sig")
+
     df_ventas = limpiar_df(df_ventas)
     df_negados = limpiar_df(df_negados)
+
+    df_ventas["Cantidad"] = pd.to_numeric(
+        df_ventas["Cantidad"], errors="coerce"
+    ).fillna(0)
+    df_negados["Negados"] = pd.to_numeric(
+        df_negados["Negados"], errors="coerce"
+    ).fillna(0)
+    df_ventas["Año"] = pd.to_numeric(df_ventas["Año"], errors="coerce")
+    df_negados["Año"] = pd.to_numeric(df_negados["Año"], errors="coerce")
 
     # Asegurar tipos numéricos correctos
     df_ventas["Cantidad"] = pd.to_numeric(
