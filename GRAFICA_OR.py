@@ -147,16 +147,9 @@ def load_data():
     df_ventas = limpiar_df(df_ventas)
     df_negados = limpiar_df(df_negados)
 
-    df_ventas["Cantidad"] = pd.to_numeric(
-        df_ventas["Cantidad"], errors="coerce"
-    ).fillna(0)
-    df_negados["Negados"] = pd.to_numeric(
-        df_negados["Negados"], errors="coerce"
-    ).fillna(0)
-    df_ventas["Año"] = pd.to_numeric(df_ventas["Año"], errors="coerce")
-    df_negados["Año"] = pd.to_numeric(df_negados["Año"], errors="coerce")
+    st.write("Columnas ventas:", df_ventas.columns.tolist())
+    st.write("Columnas negados:", df_negados.columns.tolist())
 
-    # Asegurar tipos numéricos correctos
     df_ventas["Cantidad"] = pd.to_numeric(
         df_ventas["Cantidad"], errors="coerce"
     ).fillna(0)
