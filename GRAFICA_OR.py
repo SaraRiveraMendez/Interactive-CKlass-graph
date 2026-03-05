@@ -451,3 +451,87 @@ if show_heat:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
+# =============================
+# TOP 3 PRODUCTOS
+# =============================
+st.markdown(
+    '<div class="section-title">Top 3 Productos — Temporada</div>',
+    unsafe_allow_html=True,
+)
+
+top3 = (
+    ventas.groupby("ProductoID")["Cantidad"]
+    .sum()
+    .reset_index()
+    .sort_values("Cantidad", ascending=False)
+    .head(3)
+    .reset_index(drop=True)
+)
+
+if top3.empty:
+    st.info("No hay datos de ventas para mostrar el ranking.")
+else:
+    MEDALLAS = ["🥇", "🥈", "🥉"]
+    COLORES = ["#C8102E", "#6B6B6B", "#A0522D"]
+    total_sucursal = ventas["Cantidad"].sum()
+
+    cols = st.columns(3)
+    for i, row in top3.iterrows():
+        pct = (row["Cantidad"] / total_sucursal * 100) if total_sucursal > 0 else 0
+        barra_fill = int(pct)  # % para la barra visual
+
+        with cols[i]:
+            st.markdown(
+                f"""
+                <div style="
+                    background: white;
+                    border-radius: 10px;
+                    padding: 1.4rem 1.5rem;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+                    border-top: 4px solid {COLORES[i]};
+                    text-align: center;
+                ">
+                    <div style="font-size:2.2rem; line-height:1;">{MEDALLAS[i]}</div>
+                    <div style="
+                        font-size: 0.7rem;
+                        color: #888;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        margin: 0.6rem 0 0.2rem 0;
+                        font-weight: 600;
+                    ">#{i+1} Producto</div>
+                    <div style="
+                        font-size: 0.95rem;
+                        font-weight: 700;
+                        color: #1A1A1A;
+                        word-break: break-all;
+                        margin-bottom: 0.8rem;
+                    ">{row['ProductoID']}</div>
+                    <div style="
+                        font-size: 1.6rem;
+                        font-weight: 700;
+                        color: {COLORES[i]};
+                        line-height: 1;
+                    ">{int(row['Cantidad']):,}</div>
+                    <div style="font-size:0.75rem; color:#888; margin-bottom:0.8rem;">unidades</div>
+                    <!-- Barra de progreso -->
+                    <div style="
+                        background: #F0F0F0;
+                        border-radius: 99px;
+                        height: 6px;
+                        overflow: hidden;
+                        margin-bottom: 0.3rem;
+                    ">
+                        <div style="
+                            width: {barra_fill}%;
+                            background: {COLORES[i]};
+                            height: 100%;
+                            border-radius: 99px;
+                        "></div>
+                    </div>
+                    <div style="font-size:0.72rem; color:#aaa;">{pct:.1f}% del total</div>
+                </div>
+            """,
+                unsafe_allow_html=True,
+            )
