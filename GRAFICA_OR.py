@@ -135,8 +135,8 @@ def normalizar_producto_id(product_id):
 
 @st.cache_data
 def load_data():
-    df_ventas = pd.read_csv("data/ventas_lights_final.csv", encoding="utf-8-sig")
-    df_negados = pd.read_csv("data/negados_lights_final.csv", encoding="utf-8-sig")
+    df_ventas = pd.read_parquet("data/ventas_lights_final.parquet")
+    df_negados = pd.read_parquet("data/negados_lights_final.parquet")
     df_ventas = limpiar_df(df_ventas)
     df_negados = limpiar_df(df_negados)
 

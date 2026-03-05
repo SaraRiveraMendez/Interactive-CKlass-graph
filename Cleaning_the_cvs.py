@@ -67,17 +67,17 @@ def limpiar_archivo_csv(ruta_archivo):
     )
 
     # Leer archivo
-    print(f"📖 Leyendo archivo...")
+    print(f"Leyendo archivo...")
     df = pd.read_csv(ruta_archivo, encoding="utf-8-sig")
     print(f"   - Filas originales: {len(df)}")
     print(f"   - Columnas: {df.columns.tolist()}")
 
     # Crear backup
-    print(f"\n💾 Creando backup en: {backup_path}")
+    print(f"\nCreando backup en: {backup_path}")
     df.to_csv(backup_path, index=False, encoding="utf-8-sig")
 
     # Estadísticas ANTES
-    print(f"\n📊 ANTES DE LIMPIAR:")
+    print(f"\nANTES DE LIMPIAR:")
     if "Estado" in df.columns:
         estados_unicos_antes = df["Estado"].nunique()
         print(f"   - Estados únicos: {estados_unicos_antes}")
@@ -107,7 +107,7 @@ def limpiar_archivo_csv(ruta_archivo):
             print(f"   - Ejemplos: {duplicados_suc[:5]}")
 
     # Limpiar
-    print(f"\n🧹 LIMPIANDO DATOS...")
+    print(f"\nLIMPIANDO DATOS...")
     if "Estado" in df.columns:
         print(f"   - Limpiando columna 'Estado'...")
         df["Estado"] = df["Estado"].apply(limpiar_nombre_duplicado)
@@ -121,7 +121,7 @@ def limpiar_archivo_csv(ruta_archivo):
         df[col] = df[col].astype(str).str.strip()
 
     # Estadísticas DESPUÉS
-    print(f"\n✅ DESPUÉS DE LIMPIAR:")
+    print(f"\nDESPUÉS DE LIMPIAR:")
     if "Estado" in df.columns:
         estados_unicos_despues = df["Estado"].nunique()
         print(f"   - Estados únicos: {estados_unicos_despues}")
@@ -137,9 +137,9 @@ def limpiar_archivo_csv(ruta_archivo):
         )
 
     # Sobrescribir archivo
-    print(f"\n💾 Sobrescribiendo archivo original...")
+    print(f"\nSobrescribiendo archivo original...")
     df.to_csv(ruta_archivo, index=False, encoding="utf-8-sig")
-    print(f"   ✅ Archivo actualizado: {ruta_archivo}")
+    print(f"Archivo actualizado: {ruta_archivo}")
 
     return df
 
@@ -159,16 +159,16 @@ if __name__ == "__main__":
             try:
                 df_limpio = limpiar_archivo_csv(archivo)
             except Exception as e:
-                print(f"\n❌ ERROR procesando {archivo}: {e}")
+                print(f"\nERROR procesando {archivo}: {e}")
         else:
-            print(f"\n⚠️  Archivo no encontrado: {archivo}")
+            print(f"\nArchivo no encontrado: {archivo}")
 
     print("\n" + "=" * 80)
-    print("✅ PROCESO COMPLETADO")
+    print("PROCESO COMPLETADO")
     print("=" * 80)
     print("\nBackups creados con timestamp en el mismo directorio.")
     print("Los archivos originales han sido sobrescritos con datos limpios.")
     print(
-        "\n⚠️  IMPORTANTE: Reinicia tu aplicación Streamlit para cargar los datos limpios."
+        "\nIMPORTANTE: Reinicia tu aplicación Streamlit para cargar los datos limpios."
     )
     print("=" * 80 + "\n")
