@@ -52,10 +52,6 @@ st.markdown(
             border-left: 4px solid #C8102E; padding-left: 0.6rem;
             margin: 1.5rem 0 0.8rem 0;
         }
-        .view-selector {
-            background: white; border-radius: 8px; padding: 1rem;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 1rem;
-        }
         #MainMenu, footer, header { visibility: hidden; }
         .block-container { padding-top: 1rem; }
     </style>
@@ -65,37 +61,50 @@ st.markdown(
 
 
 # =============================
-# DATA
+# DATA FUNCTIONS
 # =============================
 def limpiar_nombre_duplicado(texto):
     """
     Detecta y limpia nombres duplicados/triplicados.
-    Ej: 'ChiapasChiapas' → 'Chiapas'
-        'GuanajuatoGuanajuatoGuanajuato' → 'Guanajuato'
     """
     if pd.isna(texto) or texto == "nan":
         return texto
 
     texto = str(texto).strip()
-
-    # Intentar detectar repeticiones
     longitud = len(texto)
 
-    # Probar divisores desde 2 hasta 10 (para nombres duplicados hasta 10 veces)
+    if longitud < 4:
+        return texto
+
+    # Estrategia 1: Repeticiones exactas
     for n in range(2, 11):
         if longitud % n == 0:
             tam_segmento = longitud // n
             segmento = texto[:tam_segmento]
-
-            # Verificar si el texto es la repetición exacta del segmento
             if segmento * n == texto:
+                return segmento
+
+    # Estrategia 2: Duplicados con espacios
+    if longitud % 2 == 0:
+        mitad = longitud // 2
+        primera_mitad = texto[:mitad]
+        segunda_mitad = texto[mitad:]
+        if primera_mitad == segunda_mitad:
+            return primera_mitad
+
+    # Estrategia 3: Patrones flexibles
+    for tam in range(3, longitud // 2 + 1):
+        segmento = texto[:tam]
+        repeticiones = longitud // tam
+        if segmento * repeticiones == texto[: tam * repeticiones]:
+            if repeticiones >= 2:
                 return segmento
 
     return texto
 
 
 def limpiar_df(df):
-    """Limpia encoding, strips espacios y normaliza strings en todo el DataFrame."""
+    """Limpia encoding, strips espacios y normaliza strings."""
     for col in df.select_dtypes(include="object").columns:
         df[col] = (
             df[col]
@@ -107,7 +116,6 @@ def limpiar_df(df):
             .str.replace(r"[\x00-\x1f\x7f-\x9f]", "", regex=True)
         )
 
-    # Limpiar nombres duplicados/triplicados (ej: "ChiapasChiapas" → "Chiapas")
     if "Estado" in df.columns:
         df["Estado"] = df["Estado"].apply(limpiar_nombre_duplicado)
     if "Sucursal_Nombre" in df.columns:
@@ -117,63 +125,67 @@ def limpiar_df(df):
 
 
 def normalizar_producto_id(product_id):
-    """
-    Normaliza ProductoID para hacer match entre ventas y negados.
-    Ventas: enteros (151000078)
-    Negados: strings con padding ("000151000078270")
-    Extrae los dígitos centrales comunes.
-    """
+    """Normaliza ProductoID para hacer match entre ventas y negados."""
     product_str = str(product_id).strip()
-    # Remover ceros a la izquierda
     product_str = product_str.lstrip("0")
-    # Si tiene más de 9 dígitos, tomar los primeros 9 (parte común)
     if len(product_str) > 9:
         return product_str[:9]
     return product_str
 
 
-@st.cache_data
+@st.cache_data(show_spinner="Cargando datos...")
 def load_data():
-    # 🔗 Reemplaza estos IDs con los de tus archivos de Google Drive
-    ID_NEGADOS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
-    ID_VENTAS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
+    try:
+        # IDs de Google Drive
+        ID_NEGADOS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
+        ID_VENTAS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
 
-    url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
-    url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
+        url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
+        url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
 
-    df_ventas = pd.read_csv(url_ventas, encoding="utf-8-sig")
-    df_negados = pd.read_csv(url_negados, encoding="utf-8-sig")
+        # Cargar datos
+        df_ventas = pd.read_csv(url_ventas, encoding="utf-8-sig")
+        df_negados = pd.read_csv(url_negados, encoding="utf-8-sig")
 
-    df_ventas = limpiar_df(df_ventas)
-    df_negados = limpiar_df(df_negados)
+        # Limpiar
+        df_ventas = limpiar_df(df_ventas)
+        df_negados = limpiar_df(df_negados)
 
-    st.write("Columnas ventas:", df_ventas.columns.tolist())
-    st.write("Columnas negados:", df_negados.columns.tolist())
+        # Convertir tipos numéricos
+        df_ventas["Cantidad"] = pd.to_numeric(
+            df_ventas["Cantidad"], errors="coerce"
+        ).fillna(0)
+        df_negados["Negados"] = pd.to_numeric(
+            df_negados["Negados"], errors="coerce"
+        ).fillna(0)
+        df_ventas["Año"] = pd.to_numeric(df_ventas["Año"], errors="coerce")
+        df_negados["Año"] = pd.to_numeric(df_negados["Año"], errors="coerce")
 
-    df_ventas["Cantidad"] = pd.to_numeric(
-        df_ventas["Cantidad"], errors="coerce"
-    ).fillna(0)
-    df_negados["Negados"] = pd.to_numeric(
-        df_negados["Negados"], errors="coerce"
-    ).fillna(0)
-    df_ventas["Año"] = pd.to_numeric(df_ventas["Año"], errors="coerce")
-    df_negados["Año"] = pd.to_numeric(df_negados["Año"], errors="coerce")
+        # Limpiar Sem_ISO
+        if "Sem_ISO" in df_ventas.columns:
+            df_ventas["Sem_ISO"] = df_ventas["Sem_ISO"].astype(str).str.strip()
+        if "Sem_ISO" in df_negados.columns:
+            df_negados["Sem_ISO"] = df_negados["Sem_ISO"].astype(str).str.strip()
 
-    # Limpiar Sem_ISO
-    if "Sem_ISO" in df_ventas.columns:
-        df_ventas["Sem_ISO"] = df_ventas["Sem_ISO"].astype(str).str.strip()
-    if "Sem_ISO" in df_negados.columns:
-        df_negados["Sem_ISO"] = df_negados["Sem_ISO"].astype(str).str.strip()
+        # Normalizar ProductoID
+        df_ventas["ProductoID_Norm"] = df_ventas["ProductoID"].apply(
+            normalizar_producto_id
+        )
+        df_negados["ProductoID_Norm"] = df_negados["ProductoID"].apply(
+            normalizar_producto_id
+        )
 
-    # CREAR ProductoID_Normalizado para análisis cruzado
-    df_ventas["ProductoID_Norm"] = df_ventas["ProductoID"].apply(normalizar_producto_id)
-    df_negados["ProductoID_Norm"] = df_negados["ProductoID"].apply(
-        normalizar_producto_id
-    )
+        return df_ventas, df_negados
 
-    return df_ventas, df_negados
+    except Exception as e:
+        st.error(f"❌ Error al cargar los datos: {str(e)}")
+        st.info(
+            "🔍 Verifica que los archivos de Google Drive sean públicos (Cualquier persona con el enlace puede ver)"
+        )
+        st.stop()
 
 
+# Cargar datos
 df_ventas, df_negados = load_data()
 
 # =============================
@@ -195,12 +207,11 @@ LAYOUT_BASE = dict(
 )
 
 # =============================
-# SIDEBAR — FILTROS EN CASCADA
+# SIDEBAR — FILTROS
 # =============================
 st.sidebar.markdown("## 🔍 Filtros")
 st.sidebar.markdown("---")
 
-# FIX ROBUSTO: Convertir explícitamente a strings de Python y eliminar duplicados
 estados = sorted(df_ventas["Estado"].dropna().astype(str).unique().tolist())
 estado_select = st.sidebar.selectbox("Estado", estados, key="estado_sb")
 
@@ -241,9 +252,6 @@ modo_vista = st.sidebar.radio(
     index=0,
 )
 
-# =============================
-# CHECKLIST DE GRÁFICAS
-# =============================
 st.sidebar.markdown("---")
 st.sidebar.markdown("## 📈 Gráficas")
 
@@ -291,7 +299,6 @@ ventas_group = (
     .reset_index()
     .rename(columns={"Cantidad": "Cantidad_Ventas"})
 )
-# Ordenar por semana ISO como número
 ventas_group["Sem_ISO_num"] = pd.to_numeric(ventas_group["Sem_ISO"], errors="coerce")
 ventas_group = ventas_group.sort_values("Sem_ISO_num").reset_index(drop=True)
 
@@ -301,17 +308,13 @@ negados_group = (
     .reset_index()
     .rename(columns={"Negados": "Eventos_Negados"})
 )
-# Ordenar por semana ISO como número
 negados_group["Sem_ISO_num"] = pd.to_numeric(negados_group["Sem_ISO"], errors="coerce")
 negados_group = negados_group.sort_values("Sem_ISO_num").reset_index(drop=True)
 
-# Heatmaps según el modo seleccionado
-if modo_vista == "Solo Ventas":
-    col_producto = "ProductoID"
-elif modo_vista == "Solo Negados":
-    col_producto = "ProductoID"
-else:  # Ambos - usar ProductoID normalizado
-    col_producto = "ProductoID_Norm"
+# Heatmaps
+col_producto = (
+    "ProductoID" if modo_vista != "Ambos (Ventas + Negados)" else "ProductoID_Norm"
+)
 
 heat_ventas_df = (
     ventas.groupby([col_producto, "Sem_ISO"])["Cantidad"]
@@ -320,7 +323,6 @@ heat_ventas_df = (
     .pivot(index=col_producto, columns="Sem_ISO", values="Cantidad")
     .fillna(0)
 )
-# Ordenar columnas numéricamente
 if not heat_ventas_df.empty:
     cols_ordenadas = sorted(
         heat_ventas_df.columns,
@@ -335,7 +337,6 @@ heat_negados_df = (
     .pivot(index=col_producto, columns="Sem_ISO", values="Negados")
     .fillna(0)
 )
-# Ordenar columnas numéricamente
 if not heat_negados_df.empty:
     cols_ordenadas = sorted(
         heat_negados_df.columns,
@@ -352,7 +353,6 @@ semanas_con_quiebre = (negados_group["Eventos_Negados"] > 0).sum()
 productos_activos = ventas[col_producto].nunique()
 productos_con_quiebre = negados[col_producto].nunique()
 
-# Productos en común (solo en modo "Ambos")
 if modo_vista == "Ambos (Ventas + Negados)":
     productos_comunes = len(
         set(ventas[col_producto].unique()) & set(negados[col_producto].unique())
@@ -412,8 +412,7 @@ if series_activas:
     )
 
     if len(series_activas) == 2:
-        contenedores = st.columns(2)
-        col_ventas, col_quiebres = contenedores[0], contenedores[1]
+        col_ventas, col_quiebres = st.columns(2)
     else:
         col_ventas = col_quiebres = st.container()
 
@@ -437,7 +436,6 @@ if series_activas:
             xaxis_title="Semana ISO",
             yaxis_title="Cantidad",
         )
-        # Forzar categorías en orden correcto
         fig_ventas.update_xaxes(
             type="category",
             categoryorder="array",
@@ -469,7 +467,6 @@ if series_activas:
             xaxis_title="Semana ISO",
             yaxis_title="Unidades No Satisfechas",
         )
-        # Forzar categorías en orden correcto
         fig_negados.update_xaxes(
             type="category",
             categoryorder="array",
@@ -498,23 +495,6 @@ COLORSCALE_QUIEBRE = [
     [0.7, "#E07020"],
     [1.0, "#8B2500"],
 ]
-
-HEATMAP_LAYOUT = dict(
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    font=dict(family="Inter, Arial, sans-serif"),
-    xaxis=dict(
-        title="Producto",
-        tickangle=-45,
-        tickfont=dict(size=8, color=GRIS),
-        showgrid=False,
-    ),
-    yaxis=dict(
-        title="Semana ISO", tickfont=dict(size=9, color=GRIS), autorange="reversed"
-    ),
-    margin=dict(t=50, b=120, l=80, r=20),
-    height=500,
-)
 
 mostrar_heat_ventas = graficas_activas["heat_ventas"] and modo_vista != "Solo Negados"
 mostrar_heat_quiebres = (
@@ -560,9 +540,8 @@ if mostrar_heat_ventas and not heat_ventas_df.empty:
     st.plotly_chart(fig_hv, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 elif mostrar_heat_ventas:
-    st.info(
-        "No hay datos de ventas para mostrar en el heatmap con los filtros actuales."
-    )
+    st.info("No hay datos de ventas para el heatmap con los filtros actuales.")
+
 
 if mostrar_heat_quiebres and not heat_negados_df.empty:
     fig_hn = go.Figure(
@@ -597,9 +576,7 @@ if mostrar_heat_quiebres and not heat_negados_df.empty:
     st.plotly_chart(fig_hn, use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 elif mostrar_heat_quiebres:
-    st.info(
-        "No hay datos de quiebres para mostrar en el heatmap con los filtros actuales."
-    )
+    st.info("No hay datos de quiebres para el heatmap con los filtros actuales.")
 
 # =============================
 # EMPTY STATE
