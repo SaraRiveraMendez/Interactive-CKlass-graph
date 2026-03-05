@@ -246,7 +246,7 @@ with col3:
     )
 with col4:
     st.markdown(
-        f'<div class="kpi-card"><div class="kpi-label">Productos</div><div class="kpi-value">{ventas["ProductoID"].nunique()}</div><div class="kpi-sub">activos</div></div>',
+        f'<div class="kpi-card"><div class="kpi-label">SKU´s</div><div class="kpi-value">{ventas["ProductoID"].nunique()}</div><div class="kpi-sub">activos</div></div>',
         unsafe_allow_html=True,
     )
 
