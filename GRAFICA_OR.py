@@ -120,8 +120,9 @@ def load_data():
         ID_NEGADOS = "1-l35EBoTNQKBHKpvGNYlL89S1ORsGYIU"
         ID_VENTAS = "1rRI0Uw5AFouSbpLFjRmm8Y1xmqaBK3iu"
 
-        url_ventas = f"https://drive.google.com/uc?export=download&id={ID_VENTAS}"
-        url_negados = f"https://drive.google.com/uc?export=download&id={ID_NEGADOS}"
+        # URLs para archivos grandes (bypass advertencia de virus)
+        url_ventas = f"https://drive.usercontent.google.com/download?id={ID_VENTAS}&export=download&confirm=t"
+        url_negados = f"https://drive.usercontent.google.com/download?id={ID_NEGADOS}&export=download&confirm=t"
 
         df_ventas = limpiar_df(pd.read_csv(url_ventas, encoding="utf-8-sig"))
         df_negados = limpiar_df(pd.read_csv(url_negados, encoding="utf-8-sig"))
