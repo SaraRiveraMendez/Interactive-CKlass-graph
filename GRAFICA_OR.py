@@ -559,7 +559,7 @@ if top3.empty:
 else:
     MEDALLAS = ["🥇", "🥈", "🥉"]
     COLORES = ["#921B2F", "#4F4C4C", "#91360C"]
-    total_sucursal = ventas["Negados"].sum()
+    total_sucursal = negados["Negados"].sum()
 
     cols = st.columns(3)
     for i, row in top3.iterrows():
