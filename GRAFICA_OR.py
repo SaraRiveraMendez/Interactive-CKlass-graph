@@ -629,7 +629,7 @@ st.markdown(
 )
 
 top3 = (
-    ventas.groupby("ProductoID")["Negados"]
+    negados.groupby("ProductoID")["Negados"]
     .sum()
     .reset_index()
     .sort_values("Negados", ascending=False)
