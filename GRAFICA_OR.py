@@ -588,7 +588,7 @@ if mostrar_heat_quiebres and not heat_negados_df.empty:
     st.markdown("</div>", unsafe_allow_html=True)
 elif mostrar_heat_quiebres:
     st.info(
-        "ℹ️ No hay datos de quiebres para mostrar en el heatmap con los filtros actuales."
+        "No hay datos de quiebres para mostrar en el heatmap con los filtros actuales."
     )
 
 # =============================
